@@ -29,19 +29,23 @@ class Ad(Base):
                f"Bedrooms: {self.bedrooms}, Description: {self.description}, Currency: {self.currency}, Price: {self.price}"
 
 
+def validate_html(html):
+    return bool(html) and bool(BeautifulSoup(html, "html.parser").find('div', {'id': 'MainContainer'}))
+
+
 def parse_number_of_pages(html):
     soup = BeautifulSoup(html, 'html.parser')
     resultsShowingCount = soup.find('span', {'class': re.compile('resultsShowingCount')})
     first_on_page, last_on_page, n_all = re.findall('\d+', resultsShowingCount.text)
-    print(first_on_page, last_on_page, n_all)
 
     return ceil(int(n_all) / 40)
 
 
 def get_ads(html):
     soup = BeautifulSoup(html, 'html.parser')
+
     ads = []
-    for ad_html in soup.find_all('div', {'data-listing-id': re.compile('\d+')}):
+    for ad_html in soup.find_all('div', {'class': re.compile('regular-ad')}):
         id = ad_html['data-listing-id']
         try:
             title = ad_html.find('div', {'class': 'title'}).text.strip()
@@ -63,9 +67,10 @@ def get_ads(html):
             else:
                 date = datetime.strptime(date, '%d/%m/%Y').date()
 
-            bedrooms = ad_html.find('span', {'class': 'bedrooms'}).text.strip()
+
+            bedrooms = ad_html.find('span', {'class': 'bedrooms'})
             if bedrooms:
-                bedrooms = re.sub(r'\s+', ' ', bedrooms).strip()
+                bedrooms = re.sub(r'\s+', ' ', bedrooms.text).strip()
 
             price_html = ad_html.find('div', {'class': 'price'})
 
@@ -83,9 +88,8 @@ def get_ads(html):
             ads.append(Ad(id=id, title=title, description=description, image=image, date=date, location=location,
                           bedrooms=bedrooms, currency=currency, price=price))
 
-        except TypeError as error:
-            print(f"TypeError while processing ad with id {id}: {error}")
-        except AttributeError as error:
-            print(f"TypeError while processing ad with id {id}: {error}")
-
+        except TypeError:
+            print(f"TypeError while processing ad with id {id}. Skipping...")
+        except AttributeError:
+            print(f"TypeError while processing ad with id {id}. Skipping...")
     return ads
