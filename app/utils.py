@@ -3,15 +3,16 @@ from datetime import datetime, timedelta
 from math import ceil
 
 from bs4 import BeautifulSoup
-from sqlalchemy import Column, String, Date, Numeric
+from sqlalchemy import Column, String, Date, Numeric, Integer
 
-from .database import Base
+from app.database import Base
 
 
 class Ad(Base):
     __tablename__ = 'ads'
 
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    listing_id = Column(String)
     title = Column(String)
     description = Column(String)
     image = Column(String)
@@ -19,10 +20,10 @@ class Ad(Base):
     location = Column(String)
     bedrooms = Column(String)
     currency = Column(String)
-    price = Column(Numeric(0, 2))
+    price = Column(Numeric(10, 2))
 
     def __str__(self):
-        return f"Ad {self.id}: {self.title} | {self.currency}{self.price}"
+        return f"Ad {self.listing_id}: {self.title} | {self.currency}{self.price}"
 
     def __repr__(self):
         return f"Title: {self.title}, Image: {self.image}, Date: {self.date}, Location: {self.location}, " \
@@ -41,12 +42,12 @@ def parse_number_of_pages(html):
     return ceil(int(n_all) / 40)
 
 
-def get_ads(html):
-    soup = BeautifulSoup(html, 'html.parser')
+def parse_ads(page_html):
+    soup = BeautifulSoup(page_html, 'html.parser')
 
     ads = []
     for ad_html in soup.find_all('div', {'class': re.compile('regular-ad')}):
-        id = ad_html['data-listing-id']
+        listing_id = ad_html['data-listing-id']
         try:
             title = ad_html.find('div', {'class': 'title'})
             if title:
@@ -94,11 +95,11 @@ def get_ads(html):
                     #  otherwise, there was "Please contact" set as a price
                     price = None
 
-            ads.append(Ad(id=id, title=title, description=description, image=image, date=date, location=location,
+            ads.append(Ad(listing_id=listing_id, title=title, description=description, image=image, date=date, location=location,
                           bedrooms=bedrooms, currency=currency, price=price))
 
         except TypeError:
-            print(f"TypeError while processing ad with id {id}. Skipping...")
+            print(f"TypeError while processing ad with id {listing_id}. Skipping...")
         except AttributeError:
-            print(f"TypeError while processing ad with id {id}. Skipping...")
+            print(f"TypeError while processing ad with id {listing_id}. Skipping...")
     return ads

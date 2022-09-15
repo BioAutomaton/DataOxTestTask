@@ -3,7 +3,7 @@ import asyncio
 import aiohttp
 
 from app.database import Session, Base, engine
-from app.utils import parse_number_of_pages, get_ads, validate_html
+from app.utils import parse_number_of_pages, parse_ads, validate_html, Ad
 
 user_agent = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
@@ -12,7 +12,7 @@ user_agent = {
 
 async def get_number_of_pages(session):
     response = {'html': None, 'page_number': None}
-    while not validate_html(response['html']):
+    while not response or not validate_html(response['html']):
         response = await get_page(session, page_number=999999)
 
     number_of_pages = parse_number_of_pages(response['html'])
@@ -31,7 +31,7 @@ async def get_page(session, page_number):
             return None
 
 
-async def get_all_pages():
+async def get_all_ads():
     async with aiohttp.ClientSession(base_url='https://www.kijiji.ca') as session:
         print('Getting number of pages...')
         number_of_pages, last_page_html = await get_number_of_pages(session)
@@ -39,6 +39,8 @@ async def get_all_pages():
 
         page_numbers = set(range(1, number_of_pages))
         pages_html = []
+        ads = []
+        ads.extend(parse_ads(last_page_html))
 
         while page_numbers:
             responses = await asyncio.gather(*[get_page(session, page_number=n) for n in page_numbers])
@@ -50,29 +52,26 @@ async def get_all_pages():
 
             pages_remaining = len(page_numbers)
             valid_results = sum(bool(r) for r in responses)
-            if valid_results < pages_remaining:
-                print(f"Server returned invalid HTML for {len(responses) - valid_results} pages.")
-                print(f'{pages_remaining} pages remaining...')
 
-            await asyncio.sleep(5)
+            if pages_html:
+                print(f"Server returned {valid_results} valid HTML pages. Parsing received ads...")
+                while pages_html:
+                    ads.extend(parse_ads(pages_html.pop()))
+            if valid_results <= pages_remaining:
+                # print(f"Server returned invalid HTML for {len(responses) - valid_results} pages.")
+                print(f'{pages_remaining} pages remaining... Retrying')
 
-        pages_html.append(last_page_html)
-        return pages_html
+        return ads
 
 
 if __name__ == '__main__':
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-
     loop = asyncio.get_event_loop()
-    pages = loop.run_until_complete(get_all_pages())
-    print(f"Received {len(pages)} pages.")
 
-    print("Parsing received ads...")
-    ads = []
-    for page in pages:
-        ads.extend(get_ads(page))
-    with Session() as session:
+    with Session() as db_session:
+        ads = loop.run_until_complete(get_all_ads())
         print("Number of ads collected:", len(ads))
         for ad in ads:
-            session.add(ad)
-        session.commit()
+            db_session.add(ad)
+        db_session.commit()

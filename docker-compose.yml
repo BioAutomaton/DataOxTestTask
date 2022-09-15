@@ -1,0 +1,23 @@
+version: '3'
+services:
+
+
+  db_postgres:
+    image: postgres:latest
+    container_name: postgres_db_container
+    ports:
+      - "5432:5432"
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: database
+
+  scraper:
+    image: kijiji_scraper:latest
+    container_name: kijiji_scraper_container
+    depends_on:
+      - db_postgres
+
+    environment:
+      PYTHONUNBUFFERED: 1
