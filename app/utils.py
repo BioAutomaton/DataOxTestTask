@@ -25,7 +25,7 @@ class Ad(Base):
         return f"Ad {self.id}: {self.title} | {self.currency}{self.price}"
 
     def __repr__(self):
-        return f"Title: {self.title}, Image: {self.image}, Date: {self}, Location: {self.location}, " \
+        return f"Title: {self.title}, Image: {self.image}, Date: {self.date}, Location: {self.location}, " \
                f"Bedrooms: {self.bedrooms}, Description: {self.description}, Currency: {self.currency}, Price: {self.price}"
 
 
@@ -48,42 +48,51 @@ def get_ads(html):
     for ad_html in soup.find_all('div', {'class': re.compile('regular-ad')}):
         id = ad_html['data-listing-id']
         try:
-            title = ad_html.find('div', {'class': 'title'}).text.strip()
+            title = ad_html.find('div', {'class': 'title'})
+            if title:
+                title = re.sub(r'\s+', ' ', title.text).strip()
 
-            description = ad_html.find('div', {'class': 'description'}).find(text=True, recursive=False).strip()
+            description = ad_html.find('div', {'class': 'description'})
+            if description:
+                description = re.sub(r'\s+', ' ', description.find(text=True, recursive=False)).strip()
 
             image = ad_html.find('div', {'class': 'image'}).find('picture')
             if image:
                 image = image.img['data-src'].replace('200-jpg', '640-jpg')
 
             location_html = ad_html.find('div', {'class': 'location'})
-            location = location_html.span.text.strip()
+            location = None
+            date = None
 
-            date = location_html.find('span', {'class': 'date-posted'}).text
-            if 'ago' in date:
-                date = datetime.now().date()
-            elif date == "Yesterday":
-                date = datetime.now().date() - timedelta(days=1)
-            else:
-                date = datetime.strptime(date, '%d/%m/%Y').date()
+            if location_html:
+                location = location_html.span.text.strip()
 
+                date = location_html.find('span', {'class': 'date-posted'}).text
+                if 'ago' in date:
+                    date = datetime.now().date()
+                elif date == "Yesterday":
+                    date = datetime.now().date() - timedelta(days=1)
+                else:
+                    date = datetime.strptime(date, '%d/%m/%Y').date()
 
             bedrooms = ad_html.find('span', {'class': 'bedrooms'})
             if bedrooms:
                 bedrooms = re.sub(r'\s+', ' ', bedrooms.text).strip()
 
             price_html = ad_html.find('div', {'class': 'price'})
+            currency = None
+            price = None
 
-            parsed_price = re.match(r'(\D*)([\d,.]+)?', price_html.text.strip())
+            if price_html:
+                parsed_price = re.match(r'(\D*)([\d,.]+)?', price_html.text.strip())
 
-            if parsed_price.group(2):
-                #  if successfully parsed, there is a set price
-                currency = parsed_price.group(1)
-                price = parsed_price.group(2).replace(',', '')
-            else:
-                #  otherwise, there was "Please contact" set as a price
-                currency = None
-                price = price_html.text.strip()
+                if parsed_price.group(2):
+                    #  if successfully parsed, there is a set price
+                    currency = parsed_price.group(1)
+                    price = parsed_price.group(2).replace(',', '')
+                else:
+                    #  otherwise, there was "Please contact" set as a price
+                    price = None
 
             ads.append(Ad(id=id, title=title, description=description, image=image, date=date, location=location,
                           bedrooms=bedrooms, currency=currency, price=price))
