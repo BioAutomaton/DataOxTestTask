@@ -1,6 +1,15 @@
-version: '3'
 services:
 
+  scraper:
+    build: .
+
+    container_name: kijiji_scraper_container
+    depends_on:
+      db_postgres:
+        condition: service_healthy
+
+    environment:
+      PYTHONUNBUFFERED: 1
 
   db_postgres:
     image: postgres:latest
@@ -8,16 +17,14 @@ services:
     ports:
       - "5432:5432"
 
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
       POSTGRES_DB: database
 
-  scraper:
-    image: kijiji_scraper:latest
-    container_name: kijiji_scraper_container
-    depends_on:
-      - db_postgres
-
-    environment:
-      PYTHONUNBUFFERED: 1
