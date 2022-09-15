@@ -26,8 +26,9 @@ class Ad(Base):
         return f"Ad {self.listing_id}: {self.title} | {self.currency}{self.price}"
 
     def __repr__(self):
-        return f"Title: {self.title}, Image: {self.image}, Date: {self.date}, Location: {self.location}, " \
-               f"Bedrooms: {self.bedrooms}, Description: {self.description}, Currency: {self.currency}, Price: {self.price}"
+        return f"Listing id: {self.listing_id},\tTitle: {self.title},\tImage: {self.image},\tDate: {self.date},\t" \
+               f"Location: {self.location},\tBedrooms: {self.bedrooms},\tDescription: {self.description},\t" \
+               f"Currency: {self.currency},\tPrice: {self.price}"
 
 
 def validate_html(html):
@@ -95,7 +96,8 @@ def parse_ads(page_html):
                     #  otherwise, there was "Please contact" set as a price
                     price = None
 
-            ads.append(Ad(listing_id=listing_id, title=title, description=description, image=image, date=date, location=location,
+            ads.append(Ad(listing_id=listing_id, title=title, description=description, image=image, date=date,
+                          location=location,
                           bedrooms=bedrooms, currency=currency, price=price))
 
         except TypeError:

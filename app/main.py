@@ -58,8 +58,9 @@ async def get_all_ads():
                 while pages_html:
                     ads.extend(parse_ads(pages_html.pop()))
             if valid_results <= pages_remaining:
-                # print(f"Server returned invalid HTML for {len(responses) - valid_results} pages.")
-                print(f'{pages_remaining} pages remaining... Retrying')
+                print(f"Server returned invalid HTML for {pages_remaining} pages. Retrying...")
+                # print(f'{pages_remaining} pages remaining...')
+                await asyncio.sleep(5)
 
         return ads
 
@@ -75,3 +76,7 @@ if __name__ == '__main__':
         for ad in ads:
             db_session.add(ad)
         db_session.commit()
+
+        print("Printing sample of 5 parsed ads:")
+        for ad in ads[:5]:
+            print(repr(ad))
