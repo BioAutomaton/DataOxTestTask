@@ -21,6 +21,7 @@ async def get_number_of_pages(session):
 
 
 async def get_page(session, page_number):
+    """Request a page from kijiji"""
     async with session.get(f'/b-apartments-condos/city-of-toronto/page-{page_number}/c37l1700273',
                            headers=user_agent) as response:
         html = await response.text()
