@@ -11,6 +11,7 @@ user_agent = {
 
 
 async def get_number_of_pages(session):
+    """Function to get number of pages with results"""
     response = {'html': None, 'page_number': None}
     while not response or not validate_html(response['html']):
         response = await get_page(session, page_number=999999)
@@ -29,6 +30,7 @@ async def get_page(session, page_number):
             return {'html': html, 'page_number': page_number}
         else:
             return None
+
 
 
 async def get_all_ads():
