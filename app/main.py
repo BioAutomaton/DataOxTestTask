@@ -35,6 +35,7 @@ async def get_page(session, page_number):
 
 
 async def get_all_ads():
+    """Parse all ads from kijiji. Returns a list of Ad objects"""
     async with aiohttp.ClientSession(base_url='https://www.kijiji.ca') as session:
         print('Getting number of pages...')
         number_of_pages, last_page_html = await get_number_of_pages(session)
